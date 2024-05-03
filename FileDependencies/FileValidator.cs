@@ -21,7 +21,10 @@ public abstract class FileValidator
         try
         {
             string fileContent = File.ReadAllText(filePath);
-            JsonDocument jsonDocument = JsonDocument.Parse(fileContent);
+
+            var options = new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
+
+            JsonDocument jsonDocument = JsonDocument.Parse(fileContent, options);
 
             return Validate(filePath, jsonDocument);
         }
@@ -37,14 +40,41 @@ public abstract class FileValidator
         }
     }
 
+    public Result<JsonElement, ErrorString> CheckJsonProperty(JsonElement parent, string property, string jsonFile)
+    {
+        if (!parent.TryGetProperty(property, out JsonElement jsonElement))
+            return Fail(_logger, $"{nameof(FileValidator)}.Missing{property}",
+                               "The JSON file '{jsonFile}' does not contain a '{property}' property.", jsonFile, property);
+
+        return jsonElement;
+    }
+
+    //e.g. "Parent/Nested1/Nested2"
+    public Result<JsonElement, ErrorString> CheckJsonNestedProperty(JsonElement parent, string nestedProperty, string jsonFile)
+    {
+        string[] properties = nestedProperty.Split('/');
+
+        JsonElement current = parent;
+        for (int i = 0; i < properties.Length; i++)
+        {
+            var propertyResult = CheckJsonProperty(current , properties[i], jsonFile);
+            if (propertyResult.IsFailure) return propertyResult.Error!;
+
+            current= propertyResult.Value!;
+        }
+
+        return current;
+    }
+
+
     protected abstract Result<Dependencies, ErrorString> Validate(string filePath, JsonDocument jsonDocument);
 
-    //e.g. "Body": { "fileField": "file1.txt"}
-    protected Result<SingleFileDependency, ErrorString> CheckFileFieldProperty(JsonElement body, string fileField, bool isOptional, string jsonFile)
+    //e.g. "Parent": { "fileField": "file1.txt"}
+    protected Result<SingleFileDependency, ErrorString> CheckFileFieldProperty(JsonElement parent, string fileField, bool isOptional, string jsonFile)
     {
-        if (!body.TryGetProperty(fileField, out JsonElement file))
-            return Fail(_logger, $"{nameof(FileValidator)}.Missing{fileField}",
-                "The JSON file '{jsonFile}' does not contain a '{fileField}' property.", jsonFile, fileField);
+        var fileResult = CheckJsonProperty(parent, fileField, jsonFile);
+        if (fileResult.IsFailure) return fileResult.Error!;
+        JsonElement file = fileResult.Value!;
 
         string? filePath = file.GetString();
         if (string.IsNullOrWhiteSpace(filePath))
@@ -71,12 +101,12 @@ public abstract class FileValidator
         };
     }
 
-    //e.g. "Body": { "filesField": [ "file1.txt", "file2.txt"]}
-    protected Result<MultipleFilesDependency, ErrorString> CheckFilesFieldProperty(JsonElement body, string filesField, bool isOptional, string jsonFile)
+    //e.g. "Parent": { "filesField": [ "file1.txt", "file2.txt"]}
+    protected Result<MultipleFilesDependency, ErrorString> CheckFilesFieldProperty(JsonElement parent, string filesField, bool isOptional, string jsonFile)
     {
-        if (!body.TryGetProperty(filesField, out JsonElement file))
-            return Fail(_logger, $"{nameof(FileValidator)}.Missing{filesField}",
-                "The JSON file '{jsonFile}' does not contain a '{fileField}' property.", jsonFile, filesField);
+        var fileResult = CheckJsonProperty(parent, filesField, jsonFile);
+        if (fileResult.IsFailure) return fileResult.Error!;
+        JsonElement file = fileResult.Value!;
 
         //get the JsonArray from the JsonElement
         if (!file.ValueKind.Equals(JsonValueKind.Array))
@@ -124,12 +154,12 @@ public abstract class FileValidator
         };
     }
 
-    //e.g. "Body": { "arrayField": [ "fileField":..]}
-    protected Result<List<SingleFileDependency>, ErrorString> CheckPropertyFilesFieldProperty(JsonElement body, string arrayField, string fileField, bool isOptional, string jsonFile)
+    //e.g. "Parent": { "arrayField": [ "fileField":..]}
+    protected Result<List<SingleFileDependency>, ErrorString> CheckPropertyFilesFieldProperty(JsonElement parent, string arrayField, string fileField, bool isOptional, string jsonFile)
     {
-        if (!body.TryGetProperty(arrayField, out JsonElement array))
-            return Fail(_logger, $"{nameof(FileValidator)}.Missing{arrayField}",
-                "The JSON file '{jsonFile}' does not contain a '{fileField}' property.", jsonFile, arrayField);
+        var arrayResult = CheckJsonProperty(parent, arrayField, jsonFile);
+        if (arrayResult.IsFailure) return arrayResult.Error!;
+        JsonElement array = arrayResult.Value!;
 
         //get the JsonArray from the JsonElement
         if (!array.ValueKind.Equals(JsonValueKind.Array))
@@ -149,9 +179,10 @@ public abstract class FileValidator
         for (int i = 0; i < filesCount; i++)
         {
             JsonElement element = jsonArray[i];
-            if (!element.TryGetProperty(fileField, out JsonElement file))
-                return Fail(_logger, $"{nameof(FileValidator)}.Missing{fileField}",
-                                       "The JSON file '{jsonFile}' does not contain a '{fileField}' property.", jsonFile, fileField);
+
+            var fileResult = CheckJsonProperty(element, fileField, jsonFile);
+            if (fileResult.IsFailure) return fileResult.Error!;
+            JsonElement file = fileResult.Value!;
 
             string? filePath = file.GetString();
             if (string.IsNullOrWhiteSpace(filePath))
