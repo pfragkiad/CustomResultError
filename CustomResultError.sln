@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomResultError", "CustomResultError.csproj", "{67884493-2482-4E4B-BCAA-F7CD1C23CA73}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67884493-2482-4E4B-BCAA-F7CD1C23CA73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67884493-2482-4E4B-BCAA-F7CD1C23CA73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67884493-2482-4E4B-BCAA-F7CD1C23CA73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67884493-2482-4E4B-BCAA-F7CD1C23CA73}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F4523BDB-48DD-460B-ACA8-A5CC01BBEA5A}
+	EndGlobalSection
+EndGlobal

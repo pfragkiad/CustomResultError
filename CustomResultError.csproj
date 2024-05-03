@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>1.2.0</Version>
+    <Authors>Pavlos Fragkiadoulakis</Authors>
+    <Company>Pavlos Fragkiadoulakis</Company>
+    <Description>Modern Error, Result alternatives that support generics and also are AOT compatible for native code builds.</Description>
+    <Copyright>(c) 2023-2024 Paulus Stuff</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>result; error; aot; json</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
