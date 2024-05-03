@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace CustomResultError.FileDependencies;
@@ -40,7 +41,7 @@ public abstract class FileValidator
         }
     }
 
-    public Result<JsonElement, ErrorString> CheckJsonProperty(JsonElement parent, string property, string jsonFile)
+    protected Result<JsonElement, ErrorString> CheckJsonProperty(JsonElement parent, string property, string jsonFile)
     {
         if (!parent.TryGetProperty(property, out JsonElement jsonElement))
             return Fail(_logger, $"{nameof(FileValidator)}.Missing{property}",
@@ -49,8 +50,13 @@ public abstract class FileValidator
         return jsonElement;
     }
 
+    protected Result<JsonElement, ErrorString> CheckJsonProperty(JsonDocument document, string nestedProperty, string jsonFile)
+    {
+        return CheckJsonNestedProperty(document.RootElement,nestedProperty,jsonFile);
+    }   
+    
     //e.g. "Parent/Nested1/Nested2"
-    public Result<JsonElement, ErrorString> CheckJsonNestedProperty(JsonElement parent, string nestedProperty, string jsonFile)
+    protected Result<JsonElement, ErrorString> CheckJsonNestedProperty(JsonElement parent, string nestedProperty, string jsonFile)
     {
         string[] properties = nestedProperty.Split('/');
 
@@ -69,6 +75,19 @@ public abstract class FileValidator
 
     protected abstract Result<Dependencies, ErrorString> Validate(string filePath, JsonDocument jsonDocument);
 
+    #region GetSingleFileDependency
+
+    protected Result<SingleFileDependency, ErrorString> CheckFileFieldProperty(JsonDocument document, string nestedFileField, bool isOptional, string jsonFile)
+    {
+        var fileResult = CheckJsonNestedProperty(document.RootElement, nestedFileField, jsonFile);
+        if (fileResult.IsFailure) return fileResult.Error!;
+        JsonElement file = fileResult.Value!;
+
+        return GetSingleFileDependency(nestedFileField, isOptional, jsonFile, file);
+    }
+
+
+
     //e.g. "Parent": { "fileField": "file1.txt"}
     protected Result<SingleFileDependency, ErrorString> CheckFileFieldProperty(JsonElement parent, string fileField, bool isOptional, string jsonFile)
     {
@@ -76,6 +95,11 @@ public abstract class FileValidator
         if (fileResult.IsFailure) return fileResult.Error!;
         JsonElement file = fileResult.Value!;
 
+        return GetSingleFileDependency(fileField, isOptional, jsonFile, file);
+    }
+
+    private Result<SingleFileDependency, ErrorString> GetSingleFileDependency(string fileField, bool isOptional, string jsonFile, JsonElement file)
+    {
         string? filePath = file.GetString();
         if (string.IsNullOrWhiteSpace(filePath))
         {
@@ -102,12 +126,30 @@ public abstract class FileValidator
     }
 
     //e.g. "Parent": { "filesField": [ "file1.txt", "file2.txt"]}
+    protected Result<MultipleFilesDependency, ErrorString> CheckFilesFieldProperty(JsonDocument document, string nestedFilesField, bool isOptional, string jsonFile)
+    {
+        var fileResult = CheckJsonProperty(document, nestedFilesField, jsonFile);
+        if (fileResult.IsFailure) return fileResult.Error!;
+        JsonElement file = fileResult.Value!;
+
+        return GetMultipleFilesDependency(nestedFilesField, isOptional, jsonFile, file);
+
+    }
+    #endregion
+
+    #region MultipleFilesDependency
+
     protected Result<MultipleFilesDependency, ErrorString> CheckFilesFieldProperty(JsonElement parent, string filesField, bool isOptional, string jsonFile)
     {
         var fileResult = CheckJsonProperty(parent, filesField, jsonFile);
         if (fileResult.IsFailure) return fileResult.Error!;
         JsonElement file = fileResult.Value!;
 
+        return GetMultipleFilesDependency(filesField, isOptional, jsonFile, file);
+    }
+
+    protected Result<MultipleFilesDependency, ErrorString> GetMultipleFilesDependency(string filesField, bool isOptional, string jsonFile, JsonElement file)
+    {
         //get the JsonArray from the JsonElement
         if (!file.ValueKind.Equals(JsonValueKind.Array))
             return Fail(_logger, $"{nameof(FileValidator)}.Invalid{filesField}",
@@ -154,6 +196,18 @@ public abstract class FileValidator
         };
     }
 
+    #endregion
+
+    #region List of SingleFileDependencies
+    protected Result<List<SingleFileDependency>, ErrorString> CheckPropertyFilesFieldProperty(JsonDocument document, string nestedArrayField, string fileField, bool isOptional, string jsonFile)
+    {
+        var arrayResult = CheckJsonProperty(document, nestedArrayField, jsonFile);
+        if (arrayResult.IsFailure) return arrayResult.Error!;
+        JsonElement array = arrayResult.Value!;
+
+        return GetListOfSingleFileDependency(nestedArrayField, fileField, isOptional, jsonFile, array);
+    }
+
     //e.g. "Parent": { "arrayField": [ "fileField":..]}
     protected Result<List<SingleFileDependency>, ErrorString> CheckPropertyFilesFieldProperty(JsonElement parent, string arrayField, string fileField, bool isOptional, string jsonFile)
     {
@@ -161,6 +215,11 @@ public abstract class FileValidator
         if (arrayResult.IsFailure) return arrayResult.Error!;
         JsonElement array = arrayResult.Value!;
 
+        return GetListOfSingleFileDependency(arrayField, fileField, isOptional, jsonFile, array);
+    }
+
+    protected Result<List<SingleFileDependency>, ErrorString> GetListOfSingleFileDependency(string arrayField, string fileField, bool isOptional, string jsonFile, JsonElement array)
+    {
         //get the JsonArray from the JsonElement
         if (!array.ValueKind.Equals(JsonValueKind.Array))
             return Fail(_logger, $"{nameof(FileValidator)}.Invalid{arrayField}",
@@ -189,7 +248,7 @@ public abstract class FileValidator
             {
                 if (!isOptional)
                     return Fail(_logger, $"{nameof(FileValidator)}.Empty{fileField}",
-                        "The '{filesField}' property in the JSON file '{jsonFile}' contains an empty value at index {i}.", fileField, jsonFile, i);
+                        "The '{arrayField}/{filesField}' property in the JSON file '{jsonFile}' contains an empty value at index {i}.",arrayField, fileField, jsonFile, i);
 
                 //we do not add empty entries to file dependencies
                 continue;
@@ -200,11 +259,11 @@ public abstract class FileValidator
 
             if (!File.Exists(fullPath))
                 return Fail(_logger, $"{nameof(FileValidator)}.{fileField}NotFound",
-                    "The '{filesField}' property in the JSON file '{jsonFile}' points to a non-existent file '{filePath}' at index {i}.", fileField, jsonFile, filePath, i);
+                    "The '{arrayField}/{filesField}' property in the JSON file '{jsonFile}' points to a non-existent file '{filePath}' at index {i}.", arrayField, fileField, jsonFile, filePath, i);
 
             files.Add(new SingleFileDependency
             {
-                Name = fileField,
+                Name = $"{arrayField}/{fileField}[{i}]",
                 SingleFile = new SingleFile { FileName = filePath, FullPath = fullPath },
                 IsOptional = isOptional
             });
@@ -213,6 +272,5 @@ public abstract class FileValidator
 
         return files;
     }
-
-
+    #endregion
 }
