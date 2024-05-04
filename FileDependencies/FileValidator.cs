@@ -13,10 +13,14 @@ public abstract class FileValidator
         _logger = logger;
     }
 
-    public Result<Dependencies, ErrorString> Validate(string filePath)
+    public Result<Dependencies, ErrorString> Validate(string? filePath)
     {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return Fail(_logger, $"{nameof(FileValidator)}.EmptyFilePath",
+                               "The file path is empty.");
+
         if (!File.Exists(filePath))
-            return Fail(_logger, $"{nameof(FileValidator)}.filePathNotFound",
+            return Fail(_logger, $"{nameof(FileValidator)}.FilePathNotFound",
                    "The file '{filePath}' does not exist.", filePath);
 
         try
@@ -110,8 +114,7 @@ public abstract class FileValidator
             return SingleFileDependency.Empty(fileField);
         }
 
-        string fullPath = Path.IsPathRooted(filePath) ? filePath :
-            Path.Combine(Path.GetDirectoryName(jsonFile)!, filePath);
+        string fullPath = GetFullPath(filePath, jsonFile);
 
         if (!File.Exists(fullPath))
             return Fail(_logger, $"{nameof(FileValidator)}.{fileField}NotFound",
@@ -177,8 +180,7 @@ public abstract class FileValidator
                 continue;
             }
 
-            string fullPath = Path.IsPathRooted(filePath) ? filePath :
-                Path.Combine(Path.GetDirectoryName(jsonFile)!, filePath);
+            string fullPath = GetFullPath(filePath, jsonFile);
 
             if (!File.Exists(fullPath))
                 return Fail(_logger, $"{nameof(FileValidator)}.{filesField}NotFound",
@@ -254,8 +256,7 @@ public abstract class FileValidator
                 continue;
             }
 
-            string fullPath = Path.IsPathRooted(filePath) ? filePath :
-                Path.Combine(Path.GetDirectoryName(jsonFile)!, filePath);
+            string fullPath = GetFullPath(filePath, jsonFile);
 
             if (!File.Exists(fullPath))
                 return Fail(_logger, $"{nameof(FileValidator)}.{fileField}NotFound",
@@ -272,5 +273,57 @@ public abstract class FileValidator
 
         return files;
     }
+
+
+    protected string GetFullPath(string propertyFilePath, string jsonFile)
+    {
+        return Path.IsPathRooted(propertyFilePath) ? propertyFilePath :
+             Path.Combine(Path.GetDirectoryName(jsonFile)!, propertyFilePath);
+    }
+
+    /// <summary>
+    /// Retrieves the missing non-empty file or the empty string.
+    /// </summary>
+    /// <param name="json"></param>
+    /// <param name="nestedProperty"></param>
+    /// <param name="jsonFile"></param>
+    /// <returns></returns>
+    protected string? GetMissingFileOrEmpty(JsonDocument json, string nestedProperty, string jsonFile)
+    {
+        var fileProperty = CheckJsonProperty(json, nestedProperty, jsonFile);
+        if (fileProperty.IsFailure) return null;
+
+        JsonElement file = fileProperty.Value!;
+        string? propertyFilePath = file.GetString();
+        if (string.IsNullOrWhiteSpace(propertyFilePath)) return null;
+
+        string fullPath = GetFullPath(propertyFilePath, jsonFile);
+        return File.Exists(fullPath) ? null : propertyFilePath;
+    }
+
+    protected  List<string> GetMissingFilesFromArray(JsonDocument json, string nestedArrayField, string fileField, string jsonFile)
+    {
+        List<string> missingPaths = [];
+
+        var arrayResult = CheckJsonProperty(json, nestedArrayField, jsonFile);
+        JsonElement array = arrayResult.Value!;
+        JsonElement[] jsonArray = array.EnumerateArray().ToArray();
+        foreach (JsonElement jsonElement in jsonArray)
+        {
+            var fileProperty = CheckJsonProperty(jsonElement, fileField, jsonFile);
+            if (fileProperty.IsFailure) continue;
+
+            JsonElement file = fileProperty.Value!;
+            string? propertyFilePath = file.GetString();
+            if (string.IsNullOrWhiteSpace(propertyFilePath)) continue;
+
+            string fullPath = GetFullPath(propertyFilePath, jsonFile);
+            if (!File.Exists(fullPath)) missingPaths.Add(propertyFilePath);
+        }
+
+        return missingPaths.ToHashSet().ToList();
+    }
+
+
     #endregion
 }

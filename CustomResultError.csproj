@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>1.2.7</Version>
+    <Version>1.2.12</Version>
     <Authors>Pavlos Fragkiadoulakis</Authors>
     <Company>Pavlos Fragkiadoulakis</Company>
     <Description>Modern Error, Result alternatives that support generics and also are AOT compatible for native code builds.</Description>
