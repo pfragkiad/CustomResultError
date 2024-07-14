@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>1.2.12</Version>
+    <Version>1.2.13</Version>
     <Authors>Pavlos Fragkiadoulakis</Authors>
     <Company>Pavlos Fragkiadoulakis</Company>
     <Description>Modern Error, Result alternatives that support generics and also are AOT compatible for native code builds.</Description>
@@ -13,6 +13,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>result; error; aot; json</PackageTags>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <AssemblyVersion>1.2.13</AssemblyVersion>
+    <FileVersion>1.2.13</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +30,10 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.9.2" />
   </ItemGroup>
 
 </Project>

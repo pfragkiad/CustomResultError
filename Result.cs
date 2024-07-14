@@ -1,11 +1,11 @@
 ﻿namespace CustomResultError;
 
 
-public class Result<T> : Result<T, Error>
+public class Result<T> : Result<T, ErrorString>
 {
     protected Result(T value) : base(value) { }
 
-    protected Result(Error error) : base(error) { }
+    protected Result(ErrorString error) : base(error) { }
 }
 
 
