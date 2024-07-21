@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using FluentValidation.Results;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -73,6 +74,28 @@ public static class Validator
     #endregion
 
 
+    public static ValidationResult Fail(ILogger logger,
+        ValidationResult validationResult,
+        ValidatorLogTypeIfError logTypeIfError = ValidatorLogTypeIfError.Error)
+    {
+        switch (logTypeIfError)
+        {
+            case ValidatorLogTypeIfError.Error:
+                foreach(var failure in validationResult.Errors)
+                    logger?.LogError(failure.ErrorMessage);
+                break;
+            case ValidatorLogTypeIfError.Warning:
+                foreach (var failure in validationResult.Errors)
+                    logger?.LogWarning(failure.ErrorMessage);
+                break;
+            case ValidatorLogTypeIfError.Critical:
+                foreach (var failure in validationResult.Errors)
+                    logger?.LogCritical(failure.ErrorMessage);
+                break;
+        }
+        return validationResult;
+    }
+
     public static Error<CodeType> Fail<CodeType>(ILogger logger, Error<CodeType> error,
         ValidatorLogTypeIfError logTypeIfError = ValidatorLogTypeIfError.Error)
     {
@@ -114,14 +137,14 @@ public static class Validator
     }
 
     public static Error<CodeType> Fail<CodeType>(
-   ILogger? logger,
-   CodeType errorCode,
-   string errorMessageTemplate,
-   params object?[] messageArgs)
-    {
-        logger?.LogError(errorMessageTemplate, messageArgs);
-        return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
-    }
+       ILogger? logger,
+       CodeType errorCode,
+       string errorMessageTemplate,
+       params object?[] messageArgs)
+        {
+            logger?.LogError(errorMessageTemplate, messageArgs);
+            return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
+        }
 
 
 
