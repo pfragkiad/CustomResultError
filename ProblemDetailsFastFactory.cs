@@ -19,24 +19,17 @@ public class ProblemDetailsFastFactory
     }
     public IResult Unauthorized(string message)
     {
-        return Results.BadRequest(new ProblemDetails
-        {
-            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
-            Title = "Unauthorized",
-            Detail = message,
-            Status = StatusCodes.Status401Unauthorized
-        });
+        return Results.Unauthorized();
     }
 
     public IResult Forbidden(string message)
     {
-        return Results.NotFound(new ProblemDetails
-        {
-            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
-            Title = "Forbidden",
-            Detail = message,
-            Status = StatusCodes.Status403Forbidden
-        });
+        return Results.Problem(
+            detail: message,
+            statusCode: StatusCodes.Status403Forbidden,
+            title: "Forbidden",
+            type: "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+        );
     }
 
     public IResult NotFound(string message)
@@ -52,11 +45,10 @@ public class ProblemDetailsFastFactory
 
 
     public IResult Create(string message, HttpStatusCode statusCode, string title, string rfcSection) =>
-        Results.BadRequest(new ProblemDetails
-        {
-            Type = $"https://tools.ietf.org/html/rfc9110#section-{rfcSection}",
-            Title = title,
-            Detail = message,
-            Status = (int)statusCode
-        });
+        Results.Problem(
+            detail: message,
+            statusCode: (int)statusCode,
+            title: title,
+            type: $"https://tools.ietf.org/html/rfc9110#section-{rfcSection}"
+        );
 }

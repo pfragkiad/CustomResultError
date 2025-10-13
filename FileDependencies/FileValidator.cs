@@ -29,9 +29,10 @@ public abstract class FileValidator
 
             var options = new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
 
-            JsonDocument jsonDocument = JsonDocument.Parse(fileContent, options);
-
-            return Validate(filePath, jsonDocument);
+            using (JsonDocument jsonDocument = JsonDocument.Parse(fileContent, options))
+            {
+                return Validate(filePath, jsonDocument);
+            }
         }
         catch (JsonException)
         {
@@ -225,13 +226,13 @@ public abstract class FileValidator
         //get the JsonArray from the JsonElement
         if (!array.ValueKind.Equals(JsonValueKind.Array))
             return Fail(_logger, $"{nameof(FileValidator)}.Invalid{arrayField}",
-                               "The '{filesField}' property in the JSON file '{jsonFile}' is not an array.", arrayField, jsonFile);
+                               "The '{arrayField}' property in the JSON file '{jsonFile}' is not an array.", arrayField, jsonFile);
 
         var jsonArray = array.EnumerateArray().ToArray();
 
         if (jsonArray.Length == 0)
             return Fail(_logger, $"{nameof(FileValidator)}.Empty{arrayField}",
-                "The '{filesField}' property in the JSON file '{jsonFile}' is empty.", arrayField, jsonFile);
+                "The '{arrayField}' property in the JSON file '{jsonFile}' is empty.", arrayField, jsonFile);
 
         int filesCount = jsonArray.Length;
         List<SingleFileDependency> files = [];
@@ -250,7 +251,7 @@ public abstract class FileValidator
             {
                 if (!isOptional)
                     return Fail(_logger, $"{nameof(FileValidator)}.Empty{fileField}",
-                        "The '{arrayField}/{filesField}' property in the JSON file '{jsonFile}' contains an empty value at index {i}.",arrayField, fileField, jsonFile, i);
+                        "The '{arrayField}/{fileField}' property in the JSON file '{jsonFile}' contains an empty value at index {i}.",arrayField, fileField, jsonFile, i);
 
                 //we do not add empty entries to file dependencies
                 continue;
@@ -260,7 +261,7 @@ public abstract class FileValidator
 
             if (!File.Exists(fullPath))
                 return Fail(_logger, $"{nameof(FileValidator)}.{fileField}NotFound",
-                    "The '{arrayField}/{filesField}' property in the JSON file '{jsonFile}' points to a non-existent file '{filePath}' at index {i}.", arrayField, fileField, jsonFile, filePath, i);
+                    "The '{arrayField}/{fileField}' property in the JSON file '{jsonFile}' points to a non-existent file '{filePath}' at index {i}.", arrayField, fileField, jsonFile, filePath, i);
 
             files.Add(new SingleFileDependency
             {
@@ -301,11 +302,14 @@ public abstract class FileValidator
         return File.Exists(fullPath) ? null : propertyFilePath;
     }
 
-    protected  List<string> GetMissingFilesFromArray(JsonDocument json, string nestedArrayField, string fileField, string jsonFile)
+    protected List<string> GetMissingFilesFromArray(JsonDocument json, string nestedArrayField, string fileField, string jsonFile)
     {
         List<string> missingPaths = [];
 
         var arrayResult = CheckJsonProperty(json, nestedArrayField, jsonFile);
+        if (arrayResult.IsFailure)
+            return missingPaths; // Return empty if property missing or invalid
+
         JsonElement array = arrayResult.Value!;
         JsonElement[] jsonArray = array.EnumerateArray().ToArray();
         foreach (JsonElement jsonElement in jsonArray)

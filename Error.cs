@@ -1,7 +1,4 @@
 ﻿global using ErrorString = CustomResultError.Error<string>;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing.Template;
-using Microsoft.Extensions.Logging;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 

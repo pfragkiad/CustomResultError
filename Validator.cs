@@ -2,10 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
 using System.Text.RegularExpressions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CustomResultError;
 public enum ValidatorLogTypeIfError
@@ -205,16 +202,16 @@ public static class Validator
     /// <returns></returns>
     private static string GetFormattedString(string messageTemplate)
     {
-        //var matches = Regex.Matches(messageTemplate, @"\{(\w+)\}");
-        //var matches = FormattedStringRegex().Matches(messageTemplate);
-        MatchCollection matches = _formattedStringRegex.Matches(messageTemplate);
-
-        string formattedString = messageTemplate;
-        int i = 0;
-        foreach (Match match in matches.Cast<Match>())
-            formattedString = formattedString.Replace(match.Value, $"{{{i++}}}");
-
-        return formattedString;
+        var nameToIndex = new Dictionary<string, int>();
+        int currentIndex = 0;
+        string result = _formattedStringRegex.Replace(messageTemplate, match =>
+        {
+            var name = match.Groups[1].Value;
+            if (!nameToIndex.TryGetValue(name, out int idx))
+                nameToIndex[name] = idx = currentIndex++;
+            return $"{{{idx}}}";
+        });
+        return result;
     }
 
     static Regex _formattedStringRegex;
@@ -234,7 +231,7 @@ public static class Validator
     public static async Task WriteErrorAsync<CodeType>(this HttpResponse response, Error<CodeType> error)
     {
         response.StatusCode = (int)HttpStatusCode.BadRequest;
+        response.ContentType = "application/json";
         await response.WriteAsync(error.ToJsonString());
     }
-
 }
