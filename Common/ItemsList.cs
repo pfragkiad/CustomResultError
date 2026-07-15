@@ -2,7 +2,9 @@
 
 public readonly struct ItemsList<T>
 {
-    public List<T> Items { get; init; }
+    public ItemsList() { }
+
+    public List<T> Items { get; init; } = [];
 
     public int Count => Items.Count;
 }

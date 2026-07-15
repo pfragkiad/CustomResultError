@@ -19,7 +19,12 @@ public class ProblemDetailsFastFactory
     }
     public IResult Unauthorized(string message)
     {
-        return Results.Unauthorized();
+        return Results.Problem(
+            detail: message,
+            statusCode: StatusCodes.Status401Unauthorized,
+            title: "Unauthorized",
+            type: "https://tools.ietf.org/html/rfc9110#section-15.5.2"
+        );
     }
 
     public IResult Forbidden(string message)

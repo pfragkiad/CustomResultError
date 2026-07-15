@@ -75,39 +75,15 @@ public static class Validator
         ValidationResult validationResult,
         ValidatorLogTypeIfError logTypeIfError = ValidatorLogTypeIfError.Error)
     {
-        switch (logTypeIfError)
-        {
-            case ValidatorLogTypeIfError.Error:
-                foreach(var failure in validationResult.Errors)
-                    logger?.LogError(failure.ErrorMessage);
-                break;
-            case ValidatorLogTypeIfError.Warning:
-                foreach (var failure in validationResult.Errors)
-                    logger?.LogWarning(failure.ErrorMessage);
-                break;
-            case ValidatorLogTypeIfError.Critical:
-                foreach (var failure in validationResult.Errors)
-                    logger?.LogCritical(failure.ErrorMessage);
-                break;
-        }
+        foreach (var failure in validationResult.Errors)
+            Log(logger, failure.ErrorMessage, logTypeIfError);
         return validationResult;
     }
 
     public static Error<CodeType> Fail<CodeType>(ILogger logger, Error<CodeType> error,
         ValidatorLogTypeIfError logTypeIfError = ValidatorLogTypeIfError.Error)
     {
-        switch (logTypeIfError)
-        {
-            case ValidatorLogTypeIfError.Error:
-                logger?.LogError(error.Message);
-                break;
-            case ValidatorLogTypeIfError.Warning:
-                logger?.LogWarning(error.Message);
-                break;
-            case ValidatorLogTypeIfError.Critical:
-                logger?.LogCritical(error.Message);
-                break;
-        }
+        Log(logger, error.Message, logTypeIfError);
         return error;
     }
 
@@ -118,18 +94,7 @@ public static class Validator
        ValidatorLogTypeIfError logTypeIfError = ValidatorLogTypeIfError.Error,
        params object?[] messageArgs)
     {
-        switch (logTypeIfError)
-        {
-            case ValidatorLogTypeIfError.Error:
-                logger?.LogError(errorMessageTemplate, messageArgs);
-                break;
-            case ValidatorLogTypeIfError.Warning:
-                logger?.LogWarning(errorMessageTemplate, messageArgs);
-                break;
-            case ValidatorLogTypeIfError.Critical:
-                logger?.LogCritical(errorMessageTemplate, messageArgs);
-                break;
-        }
+        Log(logger, errorMessageTemplate, logTypeIfError, messageArgs);
         return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
     }
 
@@ -138,10 +103,10 @@ public static class Validator
        CodeType errorCode,
        string errorMessageTemplate,
        params object?[] messageArgs)
-        {
-            logger?.LogError(errorMessageTemplate, messageArgs);
-            return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
-        }
+    {
+        logger?.LogError(errorMessageTemplate, messageArgs);
+        return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
+    }
 
 
 
@@ -156,19 +121,7 @@ public static class Validator
     {
         if (!validateFunction(value))
         {
-            switch (logTypeIfError)
-            {
-                case ValidatorLogTypeIfError.Error:
-                    logger?.LogError(errorMessageTemplate, messageArgs);
-                    break;
-                case ValidatorLogTypeIfError.Warning:
-                    logger?.LogWarning(errorMessageTemplate, messageArgs);
-                    break;
-                case ValidatorLogTypeIfError.Critical:
-                    logger?.LogCritical(errorMessageTemplate, messageArgs);
-                    break;
-            }
-
+            Log(logger, errorMessageTemplate, logTypeIfError, messageArgs);
             return new Error<CodeType>(message: GetFormattedString(errorMessageTemplate, messageArgs), code: errorCode);
         }
         return null;
@@ -191,6 +144,16 @@ public static class Validator
     }
 
 
+
+    private static void Log(ILogger? logger, string template, ValidatorLogTypeIfError logType, params object?[] args)
+    {
+        switch (logType)
+        {
+            case ValidatorLogTypeIfError.Error:    logger?.LogError(template, args);    break;
+            case ValidatorLogTypeIfError.Warning:  logger?.LogWarning(template, args);  break;
+            case ValidatorLogTypeIfError.Critical: logger?.LogCritical(template, args); break;
+        }
+    }
 
     //TODO: Document GetFormattedString and ProblemDetailsFastFactory
 
@@ -214,18 +177,10 @@ public static class Validator
         return result;
     }
 
-    static Regex _formattedStringRegex;
-    static Validator()
-    {
-        _formattedStringRegex = new
-            (@"\{(\w+)\}", RegexOptions.Compiled);
-    }
+    private static readonly Regex _formattedStringRegex = new(@"\{(\w+)\}", RegexOptions.Compiled);
 
     public static string GetFormattedString(string messageTemplate, params object?[] messageArgs) =>
         string.Format(GetFormattedString(messageTemplate), messageArgs);
-
-    //[GeneratedRegex(@"\{(\w+)\}")]
-    //private static partial Regex FormattedStringRegex();
 
 
     public static async Task WriteErrorAsync<CodeType>(this HttpResponse response, Error<CodeType> error)

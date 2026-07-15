@@ -42,22 +42,13 @@ public class Error<CodeType> : Error, IEquatable<Error<CodeType>>
         Code = code;
     }
 
-    static bool IsNumericType(Type type)
-    {
-        return type.IsPrimitive && (
-            type == typeof(int) ||
-            type == typeof(uint) ||
-            type == typeof(long) ||
-            type == typeof(ulong) ||
-            type == typeof(short) ||
-            type == typeof(ushort) ||
-            type == typeof(byte) ||
-            type == typeof(sbyte) ||
-            type == typeof(float) ||
-            type == typeof(double) ||
-            type == typeof(decimal)
-        );
-    }
+    static bool IsNumericType(Type type) =>
+        type == typeof(int)    || type == typeof(uint)   ||
+        type == typeof(long)   || type == typeof(ulong)  ||
+        type == typeof(short)  || type == typeof(ushort) ||
+        type == typeof(byte)   || type == typeof(sbyte)  ||
+        type == typeof(float)  || type == typeof(double) ||
+        type == typeof(decimal);
 
 
     protected string BuildDetailsString() =>
